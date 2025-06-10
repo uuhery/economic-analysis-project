@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from pydantic import BaseModel
 
 # --- 请求模型定义 ---
@@ -15,3 +15,9 @@ class FunctionPointRequest(BaseModel):
 
 class ExpertRequest(BaseModel):
     estimates: List[float]
+
+class DelphiRequest(BaseModel):
+    rounds: List[List[float]]
+
+class RegressionRequest(BaseModel):
+    data: List[Tuple[float, float]]
