@@ -7,7 +7,7 @@ This project is a web-based application for simulating cost estimation, investme
 ```
 
 economic-analysis-project/
-├── backend/   # Flask + MySQL backend
+├── backend/   # Fastapi + MySQL backend
 ├── frontend/  # Vue 2 frontend
 
 ````
