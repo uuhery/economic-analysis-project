@@ -86,7 +86,7 @@
 import axios from 'axios'
 
 export default {
-  name: 'EstimationPanel',
+  name: 'EstimationView',
   data() {
     return {
       cocomo: { loc: 15, mode: 'organic' },

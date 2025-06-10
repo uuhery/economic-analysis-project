@@ -9,8 +9,8 @@ router = APIRouter(prefix="/api/risk", tags=["Risk Analysis"])
 
 @router.post("/sensitivity")
 def run_sensitivity(req: SensitivityRequest):
-    result = sensitivity_analysis(req.base_value, req.variable_range, req.multiplier)
-    return {"impact": result}
+    return sensitivity_analysis(req.base_value, req.variable_range, req.multiplier)
+
 
 @router.post("/decision-tree")
 def run_decision_tree(paths: List[DecisionPath]):

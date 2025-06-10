@@ -10,6 +10,7 @@
       <input v-model.number="sensitivity.multiplier" placeholder="Multiplier" />
       <button @click="runSensitivity">Run</button>
       <p v-if="sensitivity.result.length">Impact: {{ sensitivity.result }}</p>
+      <canvas v-if="sensitivity.result.length" id="sensitivityChart" class="chart-canvas"></canvas>
     </section>
 
     <hr />
@@ -48,9 +49,10 @@
 
 <script>
 import axios from 'axios';
+import Chart from 'chart.js';
 
 export default {
-  name: 'RiskAnalysisView',
+  name: 'RiskView',
   data() {
     return {
       sensitivity: {
@@ -81,6 +83,20 @@ export default {
           multiplier: this.sensitivity.multiplier
         });
         this.sensitivity.result = res.data.impact;
+        this.$nextTick(() => {
+          const ctx = document.getElementById('sensitivityChart').getContext('2d');
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: res.data.labels,  // 例如 ['90', '100', '110']
+              datasets: [{
+                label: 'Impact',
+                data: res.data.impact,
+              }]
+            },
+            options: { responsive: true, scales: { y: { beginAtZero: true } } }
+          });
+        });
       } catch (err) {
         alert("Error in sensitivity: " + err.message);
       }
@@ -124,4 +140,12 @@ section {
 input {
   margin: 4px;
 }
+.chart-canvas {
+  width: 800px !important;
+  height: 450px !important;
+  display: block;
+  margin: 0 auto;
+}
+
+
 </style>

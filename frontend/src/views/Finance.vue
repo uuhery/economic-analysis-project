@@ -51,7 +51,7 @@
 import axios from 'axios';
 
 export default {
-  name: 'FinancePanel',
+  name: 'FinanceView',
   data() {
     return {
       cashFlowInput: '-1000,300,400,500',

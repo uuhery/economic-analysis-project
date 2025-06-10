@@ -2,14 +2,14 @@ import numpy as np
 import random
 
 def sensitivity_analysis(base_value: float, variable_range: list[float], multiplier: float = 1.0):
-    """
-    返回每个变量的变化对结果的影响
-    """
     results = []
     for v in variable_range:
         impact = (v * multiplier) - base_value
         results.append(round(impact, 2))
-    return results
+    return {
+        "labels": variable_range,
+        "impact": results
+    }
 
 
 def decision_tree_analysis(paths: list[dict]):
