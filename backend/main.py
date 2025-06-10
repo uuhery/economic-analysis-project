@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.finance import router as finance_router
-from api.estimation import router as estimation_router
+from api import estimation, finance, risk, scheduling
 
 app = FastAPI(title="Economic Analysis API")
 
@@ -15,5 +14,7 @@ app.add_middleware(
 )
 
 # 注册路由
-app.include_router(finance_router, prefix="/api/finance")
-app.include_router(estimation_router, prefix="/api/estimate")
+app.include_router(finance.router)
+app.include_router(estimation.router)
+app.include_router(risk.router)
+app.include_router(scheduling.router)
