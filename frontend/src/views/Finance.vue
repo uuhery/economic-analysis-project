@@ -5,12 +5,16 @@
     <!-- NPV -->
     <section>
       <h3>NPV (Net Present Value)</h3>
+      <p class="description">Calculate discounted cash flows over time. You may use cost estimation results as the initial investment.</p>
+
       <label>Cash Flows (comma-separated):</label>
       <input v-model="cashFlowInput" placeholder="-1000,300,400,500" />
+      <button @click="fillFromEstimation">📥 Use Estimated Cost as Initial</button>
+
       <label>Discount Rate (%):</label>
-      <input v-model.number="discountRate" type="number" />
+      <input v-model.number="discountRate" type="number" placeholder="e.g. 10" />
       <button @click="calculateNPV">Calculate NPV</button>
-      <p v-if="results.npv !== null">NPV: {{ results.npv }}</p>
+      <p v-if="results.npv !== null"><strong>NPV:</strong> {{ results.npv }}</p>
     </section>
 
     <hr />
@@ -18,12 +22,15 @@
     <!-- ROI -->
     <section>
       <h3>ROI (Return on Investment)</h3>
+      <p class="description">ROI = Total Gain / Total Cost. You may use cost estimation as the base cost.</p>
+
       <label>Total Gain:</label>
       <input v-model.number="roiGain" type="number" />
       <label>Total Cost:</label>
       <input v-model.number="roiCost" type="number" />
+      <button @click="useEstimationAsCost">📥 Use Estimated Cost</button>
       <button @click="calculateROI">Calculate ROI</button>
-      <p v-if="results.roi !== null">ROI: {{ results.roi }}%</p>
+      <p v-if="results.roi !== null"><strong>ROI:</strong> {{ results.roi }}%</p>
     </section>
 
     <hr />
@@ -55,6 +62,7 @@ export default {
   data() {
     return {
       cashFlowInput: '-1000,300,400,500',
+      estimatedCostFromPrevious: 1000,  // 可由上一步传入
       discountRate: 10,
       roiGain: 1500,
       roiCost: 1000,
@@ -67,6 +75,13 @@ export default {
     };
   },
   methods: {
+    fillFromEstimation() {
+      const flows = this.parseCashFlows();
+      if (!isNaN(this.estimatedCostFromPrevious)) {
+        flows[0] = -this.estimatedCostFromPrevious; // 替换初始投入
+        this.cashFlowInput = flows.join(',');
+      }
+    },
     parseCashFlows() {
       return this.cashFlowInput.split(',').map(x => parseFloat(x.trim()));
     },
@@ -80,6 +95,9 @@ export default {
       } catch (err) {
         alert('NPV error: ' + (err.response?.data?.detail || err.message));
       }
+    },
+    useEstimationAsCost() {
+      this.roiCost = this.estimatedCostFromPrevious;
     },
     async calculateROI() {
       try {
