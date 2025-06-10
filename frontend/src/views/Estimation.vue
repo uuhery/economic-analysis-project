@@ -2,40 +2,98 @@
   <div>
     <h2>📈 Cost Estimation Panel</h2>
 
-    <!-- === COCOMO === -->
-    <section>
-      <h3>COCOMO Estimation</h3>
-      <p class="description">
-        Estimate effort based on the number of delivered source lines of code (KLOC) and project mode.
-      </p>
-      <label>KLOC:</label>
-      <input v-model="cocomo.loc" type="number" placeholder="e.g. 15" />      <label>Mode:</label>
-      <select v-model="cocomo.mode">
-        <option>organic</option>
-        <option>semi-detached</option>
-        <option>embedded</option>
-      </select>
-      <button @click="calculateCocomo">Estimate</button>
-      <p v-if="result.cocomo !== null">Estimated Effort: {{ result.cocomo }} person-months</p>
-    </section>
-
-    <hr />
-
     <!-- === Function Point === -->
     <section>
       <h3>Function Point Estimation</h3>
       <p class="description">
-        Estimate software size based on functional components such as inputs, outputs, and files.
+        Estimate size via FP and then run COCOMO on converted KLOC.
       </p>
+
+      <!-- FP 输入 -->
       <div v-for="(value, key) in fpInputs" :key="key">
-        <label>{{ key.replaceAll('_', ' ') }}:</label>
+        <label>{{ key.replace(/_/g, ' ') }}:</label>
         <input v-model.number="fpInputs[key]" type="number" min="0" />
       </div>
-      <button @click="calculateFP">Estimate</button>
-      <div v-if="result.fp">
-        <p>Function Points: {{ result.fp.function_points }}</p>
-        <p>Estimated Effort (hours): {{ result.fp.estimated_effort_hours }}</p>
+
+      <h4>Function Complexity Level (3-level)</h4>
+      <div v-for="(levels, key) in fpWeightOptions" :key="key">
+        <label>{{ key.replace(/_/g, ' ') }}:</label>
+        <select v-model="fpSelections[key]">
+          <option v-for="(val, label) in levels" :key="label" :value="label">
+            {{ label }} ({{ val }})
+          </option>
+        </select>
       </div>
+
+
+      <!-- 简单展示 cost_drivers，按需增删属性 -->
+      <div v-for="(v, k) in fpConfig.costDrivers" :key="k">
+        <label>{{ k }}:</label>
+        <input v-model.number="fpConfig.costDrivers[k]" type="number" step="0.01" min="0.01" />
+      </div>
+
+      <label>Language:</label>
+      <select v-model="fpConfig.language">
+        <option value="java">java</option>
+        <option value="python">python</option>
+        <option value="c++">c++</option>
+        <option value="javascript">javascript</option>
+        <option value="cobol">cobol</option>
+      </select>
+
+      <button @click="addCostDriver">+ Add Cost Driver</button>
+
+      <button @click="calculateFP">Estimate</button>
+
+      <div v-if="result.fp">
+        <p>Raw FP: {{ result.fp.raw_fp }}</p>
+        <p>Adjusted FP: {{ result.fp.adjusted_fp }}</p>
+        <p>KLOC: {{ result.fp.kloc }}</p>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- === COCOMO === -->
+    <section>
+      <h3>COCOMO Estimation</h3>
+      <p class="description">
+        Estimate effort based on delivered KLOC, project mode and EAF.
+      </p>
+      <label>KLOC:</label>
+      <input v-model.number="cocomo.loc" type="number" min="0" placeholder="e.g. 15" />
+
+      <label>Mode:</label>
+      <select v-model="cocomo.mode">
+        <option value="organic">organic</option>
+        <option value="semi-detached">semi-detached</option>
+        <option value="embedded">embedded</option>
+      </select>
+
+      <div v-for="(value, key) in cocomo.costDrivers" :key="key">
+        <label>{{ key }}:</label>
+        <select v-model="cocomo.costDrivers[key]">
+          <option value="Very Low">Very Low</option>
+          <option value="Low">Low</option>
+          <option value="Nominal">Nominal</option>
+          <option value="High">High</option>
+          <option value="Very High">Very High</option>
+        </select>
+      </div>
+
+      <label>Cost per Person-Month:</label>
+      <input v-model.number="cocomo.cost_per_pm" type="number" step="100" min="0" placeholder="e.g. 10000" />
+
+      <button @click="calculateCocomo">Estimate</button>
+
+      <div v-if="result.cocomo">
+        <p>EAF: {{ result.cocomo.eaf }}</p>
+        <p>Effort: {{ result.cocomo.effort_pm }} person-months</p>
+        <p>Time: {{ result.cocomo.development_time_months }} months</p>
+        <p>Team Size: {{ result.cocomo.team_size }} people</p>
+        <p><strong>Total Cost:</strong> {{ result.cocomo.total_cost }} (currency)</p>
+      </div>
+
     </section>
 
     <hr />
@@ -115,13 +173,44 @@ export default {
   name: 'EstimationView',
   data() {
     return {
-      cocomo: { loc: 15, mode: 'organic' },
       fpInputs: {
         external_inputs: 0,
         external_outputs: 0,
         external_inquiries: 0,
         internal_files: 0,
         external_interfaces: 0
+      },
+      fpConfig: {
+        language: 'java',
+        costDrivers: {
+        },
+      },
+      fpWeightOptions: {
+        external_inputs: { Simple: 3, Average: 4, High: 6 },
+        external_outputs: { Simple: 4, Average: 5, High: 7 },
+        external_inquiries: { Simple: 3, Average: 4, High: 6 },
+        internal_files: { Simple: 7, Average: 10, High: 15 },
+        external_interfaces: { Simple: 5, Average: 7, High: 10 }
+      },
+      fpSelections: {
+        external_inputs: 'Average',
+        external_outputs: 'Average',
+        external_inquiries: 'Average',
+        internal_files: 'Average',
+        external_interfaces: 'Average'
+      },
+      cocomo: {
+        loc: 15,
+        mode: 'organic',
+        cost_per_pm: 10000,
+        costDrivers: {
+          RELY: 'Nominal',
+          CPLX: 'Nominal',
+          ACAP: 'Nominal',
+          PCAP: 'Nominal',
+          AEXP: 'Nominal',
+          TOOL: 'Nominal'
+        }
       },
       expertInput: '',
       expertList: [100, 120, 110],
@@ -147,13 +236,55 @@ export default {
     }
   },
   methods: {
-    async calculateCocomo() {
-      const res = await axios.post('http://localhost:8000/api/estimation/cocomo', this.cocomo);
-      this.result.cocomo = res.data.effort_person_months;
+    getFpWeightsFromSelections() {
+      const weights = {}
+      for (const key in this.fpSelections) {
+        const level = this.fpSelections[key]
+        weights[key] = this.fpWeightOptions[key][level]
+      }
+      return weights
     },
     async calculateFP() {
-      const res = await axios.post('http://localhost:8000/api/estimation/function_points', this.fpInputs);
-      this.result.fp = res.data;
+      try {
+        const payload = {
+          fp_inputs: this.fpInputs,
+          fp_weights: this.getFpWeightsFromSelections(),  // ← 新增字段
+          language: this.fpConfig.language,
+          cost_drivers: this.fpConfig.costDrivers,
+        }
+
+        const res = await axios.post(
+            'http://localhost:8000/api/estimation/function_points',
+            payload
+        )
+        this.result.fp = res.data
+      } catch (err) {
+        console.error(err)
+        alert(err.response?.data?.detail || err.message)
+      }
+    },
+    addCostDriver() {
+      const key = prompt('Enter new cost driver key:')
+      if (key) this.$set(this.fpConfig.costDrivers, key, 1.0)
+    },
+    async calculateCocomo() {
+      try {
+        const payload = {
+          loc: this.cocomo.loc,
+          mode: this.cocomo.mode,
+          cost_drivers: this.cocomo.costDrivers,
+          cost_per_pm: this.cocomo.cost_per_pm
+        }
+        const res = await axios.post(
+            'http://localhost:8000/api/estimation/cocomo',
+            payload
+        )
+        this.result.cocomo = res.data
+        localStorage.setItem("estimated_cost", res.data.total_cost.toString())
+      } catch (err) {
+        console.error(err)
+        alert(err.response?.data?.detail || err.message)
+      }
     },
     addExpert() { this.expertList.push(0); },
     removeExpert(index) { this.expertList.splice(index, 1); },

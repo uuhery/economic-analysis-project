@@ -1,17 +1,18 @@
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 from pydantic import BaseModel
 
-# --- 请求模型定义 ---
-class COCOMORequest(BaseModel):
-    loc: float
-    mode: Optional[str] = "organic"
-
+# 使用前端配置的权重计算
 class FunctionPointRequest(BaseModel):
-    external_inputs: int
-    external_outputs: int
-    external_inquiries: int
-    internal_files: int
-    external_interfaces: int
+    fp_inputs: Dict[str, int]
+    fp_weights: Dict[str, float]
+    language: str
+    cost_drivers: Dict[str, float]
+
+class CocomoRequest(BaseModel):
+    loc: float
+    mode: str
+    cost_drivers: Dict[str, str]
+    cost_per_pm: float  # 每人月成本（例如：￥10,000）
 
 class ExpertRequest(BaseModel):
     estimates: List[float]

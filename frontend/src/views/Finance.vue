@@ -62,7 +62,7 @@ export default {
   data() {
     return {
       cashFlowInput: '-1000,300,400,500',
-      estimatedCostFromPrevious: 1000,  // 可由上一步传入
+      estimatedCostFromPrevious: parseFloat(localStorage.getItem("estimated_cost") || "1000"),
       discountRate: 10,
       roiGain: 1500,
       roiCost: 1000,
