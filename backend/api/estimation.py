@@ -18,6 +18,18 @@ def cocomo_api(data: CocomoRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.post("/function_points")
+def function_points_api(data: FunctionPointRequest):
+    try:
+        return estimate_function_point(
+            data.fp_inputs,
+            data.fp_weights,
+            data.language,
+            data.cost_drivers
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
 @router.post("/expert")
 def expert_api(data: ExpertRequest):
     try:

@@ -2,6 +2,33 @@
   <div>
     <h2>📈 Cost Estimation Panel</h2>
 
+    <div v-if="getComparisonRows().length > 0">
+      <h3>📋 Estimation Comparison Summary</h3>
+      <table border="1">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Effort (PM)</th>
+            <th>Time (months)</th>
+            <th>Team Size</th>
+            <th>Total Cost</th>
+            <th>Comment</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in getComparisonRows()" :key="row.model">
+            <td>{{ row.model }}</td>
+            <td>{{ row.effort }}</td>
+            <td>{{ row.time }}</td>
+            <td>{{ row.team }}</td>
+            <td>{{ row.cost }}</td>
+            <td>{{ row.comment }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr />
     <!-- === Function Point === -->
     <section>
       <h3>Function Point Estimation</h3>
@@ -324,6 +351,66 @@ export default {
           .filter(pair => pair.length === 2 && pair.every(x => !isNaN(x)));
       const res = await axios.post('http://localhost:8000/api/estimation/regression', { data });
       this.result.regression = res.data;
+    },
+    getComparisonRows() {
+      const rows = [];
+
+      if (this.result.cocomo) {
+        rows.push({
+          model: 'COCOMO',
+          effort: this.result.cocomo.effort_pm,
+          time: this.result.cocomo.development_time_months,
+          team: this.result.cocomo.team_size,
+          cost: this.result.cocomo.total_cost,
+          comment: 'Classic engineering model'
+        });
+      }
+
+      if (this.result.fp) {
+        rows.push({
+          model: 'Function Point',
+          effort: '—',
+          time: '—',
+          team: '—',
+          cost: `Converted: ${this.result.fp.kloc} KLOC`,
+          comment: 'Size-based estimation'
+        });
+      }
+
+      if (this.result.expert !== null) {
+        rows.push({
+          model: 'Expert Judgment',
+          effort: '—',
+          time: '—',
+          team: '—',
+          cost: this.result.expert,
+          comment: 'Average of expert inputs'
+        });
+      }
+
+      if (this.result.delphi) {
+        rows.push({
+          model: 'Delphi Method',
+          effort: '—',
+          time: '—',
+          team: '—',
+          cost: this.result.delphi.final_estimate,
+          comment: `SD: ${this.result.delphi.std_deviation}`
+        });
+      }
+
+      if (this.result.regression) {
+        rows.push({
+          model: 'Regression Model',
+          effort: '—',
+          time: '—',
+          team: '—',
+          cost: this.result.regression.example_prediction_x100,
+          comment: `y(x=100)`
+        });
+      }
+
+      return rows;
     }
   }
 }
