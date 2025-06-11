@@ -28,9 +28,10 @@ uvicorn app.main:app --reload
 
 ```bash
 cd frontend
-yarn install  # or npm install
-yarn serve    # or npm run serve
+npm install
+npm run serve
 ```
+📦 Recommended Node version: 16.15.0  
 
 ## 🧠 Modules
 
