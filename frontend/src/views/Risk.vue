@@ -77,7 +77,7 @@ export default {
     async runSensitivity() {
       const range = this.sensitivity.rangeStr.split(',').map(Number);
       try {
-        const res = await axios.post('http://localhost:8000/api/risk/sensitivity', {
+        const res = await axios.post('/api/risk/sensitivity', {
           base_value: this.sensitivity.baseValue,
           variable_range: range,
           multiplier: this.sensitivity.multiplier
@@ -110,7 +110,7 @@ export default {
     },
     async runDecisionTree() {
       try {
-        const res = await axios.post('http://localhost:8000/api/risk/decision-tree', this.decisionTree.paths);
+        const res = await axios.post('/api/risk/decision-tree', this.decisionTree.paths);
         this.decisionTree.result = res.data.expected_value;
       } catch (err) {
         alert("Error in decision tree: " + err.message);
@@ -119,7 +119,7 @@ export default {
 
     async runMonteCarlo() {
       try {
-        const res = await axios.post('http://localhost:8000/api/risk/monte-carlo', {
+        const res = await axios.post('/api/risk/monte-carlo', {
           base: this.monteCarlo.base,
           std_dev: this.monteCarlo.stdDev,
           iterations: this.monteCarlo.iterations

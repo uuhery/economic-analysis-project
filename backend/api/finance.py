@@ -6,7 +6,7 @@ from services.finance_calculator import (
     calculate_npv, calculate_roi, calculate_irr, calculate_payback
 )
 
-router = APIRouter(prefix="/api/finance", tags=["Finance"])
+router = APIRouter(prefix="/finance", tags=["Finance"])
 
 # NPV
 @router.post("/npv")

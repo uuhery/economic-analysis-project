@@ -1,4 +1,5 @@
 import math
+import statistics
 from typing import Dict, List
 
 LANGUAGE_FP_TO_KLOC = {
@@ -74,75 +75,102 @@ def calculate_eaf(cost_drivers: Dict[str, str]) -> float:
         eaf *= multiplier
     return eaf
 
-def calculate_expert_judgment(estimates: list) -> float:
+def calculate_expert_judgment(experts: list[dict]) -> dict:
     """
-    计算专家判断的平均值。
-    estimates: 专家估算值列表
+    计算加权平均、标准差、极值、平均置信度。
     """
-    if not estimates:
-        raise ValueError("Estimate list cannot be empty")
-    # 过滤掉非数字值，确保都是浮点数
-    valid_estimates = [float(e) for e in estimates if isinstance(e, (int, float))]
-    if not valid_estimates:
-        raise ValueError("No valid numerical estimates provided.")
-    return round(sum(valid_estimates) / len(valid_estimates), 2)
+    if not experts:
+        raise ValueError("Expert list cannot be empty")
 
+    weights = []
+    estimates = []
 
-def calculate_delphi_method(rounds: List[List[float]]) -> Dict[str, float]:
+    for e in experts:
+        est = e["estimate"]
+        conf = e["confidence"]
+        if not (0 <= conf <= 1):
+            raise ValueError(f"Confidence must be between 0 and 1. Got: {conf}")
+        estimates.append(est)
+        weights.append(conf)
+
+    total_weight = sum(weights)
+    if total_weight == 0:
+        raise ValueError("Total confidence weight cannot be zero.")
+
+    weighted_sum = sum(est * w for est, w in zip(estimates, weights))
+    weighted_avg = weighted_sum / total_weight
+
+    # 标准差（不加权）
+    mean = sum(estimates) / len(estimates)
+    variance = sum((x - mean) ** 2 for x in estimates) / len(estimates)
+    std_dev = math.sqrt(variance)
+
+    return {
+        "weighted_average": round(weighted_avg, 2),
+        "std_deviation": round(std_dev, 2),
+        "min": round(min(estimates), 2),
+        "max": round(max(estimates), 2),
+        "avg_confidence": round(sum(weights) / len(weights), 2)
+    }
+
+def calculate_delphi_method(rounds: List[List[float]], threshold: float) -> Dict:
     """
-    Delphi 方法计算。
-    rounds: 多轮专家估算值，每轮是一个列表
+    Delphi 方法计算，包括每轮均值、标准差、是否收敛。
     """
     if not rounds or not all(round for round in rounds):
         raise ValueError("Delphi rounds cannot be empty or contain empty rounds.")
 
-    final_estimates = []
-    for r in rounds:
-        valid_r = [float(e) for e in r if isinstance(e, (int, float))]
-        if valid_r:
-            final_estimates.extend(valid_r) # 将所有轮次的有效估算值收集起来
+    history = []
+    converged = False
 
-    if not final_estimates:
-        raise ValueError("No valid estimates found across all Delphi rounds.")
+    for i, r in enumerate(rounds):
+        valid = [float(e) for e in r if isinstance(e, (int, float))]
+        if not valid:
+            continue
+        mean = sum(valid) / len(valid)
+        std = math.sqrt(sum((x - mean) ** 2 for x in valid) / len(valid)) if len(valid) > 1 else 0.0
 
-    # 计算最终平均值
-    final_average = sum(final_estimates) / len(final_estimates)
+        history.append({
+            "round": i + 1,
+            "mean": round(mean, 2),
+            "std": round(std, 2)
+        })
 
-    # 计算最终标准差
-    if len(final_estimates) > 1:
-        std_dev = math.sqrt(sum((x - final_average) ** 2 for x in final_estimates) / (len(final_estimates) - 1))
-    else:
-        std_dev = 0.0 # 只有一个数据点时标准差为0
+        if std < threshold:
+            converged = True
+            break
+
+    final_round = history[-1] if history else {"mean": 0, "std": 0}
 
     return {
-        'final_estimate': round(final_average, 2),
-        'std_deviation': round(std_dev, 2),
-        'rounds_count': len(rounds) # 报告轮次数量
+        "final_estimate": final_round["mean"],
+        "std_deviation": final_round["std"],
+        "rounds_count": len(history),
+        "convergence": converged,
+        "estimate_history": history
     }
 
-def calculate_regression_model(inputs: list[tuple[float, float]]) -> dict:
-    """
-    :param inputs: 输入数据为 [(x1, y1), (x2, y2), ...]
-    :return: 回归系数和预测函数
-    """
-    import statistics
-
+def calculate_regression_model(inputs: List[List[float]], predict_x: float) -> Dict:
     if len(inputs) < 2:
         raise ValueError("At least two data points are required for regression.")
 
     xs, ys = zip(*inputs)
     mean_x, mean_y = statistics.mean(xs), statistics.mean(ys)
 
-    # 计算回归系数 b 和截距 a
+    # 回归系数 b 和截距 a
     b = sum((x - mean_x) * (y - mean_y) for x, y in inputs) / sum((x - mean_x) ** 2 for x in xs)
     a = mean_y - b * mean_x
 
-    def predict(x: float) -> float:
-        return round(a + b * x, 2)
+    # 拟合优度 R²
+    ss_tot = sum((y - mean_y) ** 2 for y in ys)
+    ss_res = sum((y - (a + b * x)) ** 2 for x, y in inputs)
+    r_squared = 1 - ss_res / ss_tot if ss_tot != 0 else 0
 
     return {
         "intercept_a": round(a, 4),
         "slope_b": round(b, 4),
-        "predict_function": predict,
-        "sample_count": len(inputs)
+        "predict_y": round(a + b * predict_x, 2),
+        "sample_count": len(inputs),
+        "r_squared": round(r_squared, 4)
     }
+

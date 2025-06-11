@@ -4,7 +4,7 @@ from typing import List
 from models.scheduling_model import Task, BalanceInput
 from services.scheduling_calculator import greedy_schedule, resource_smoothing
 
-router = APIRouter(prefix="/api/scheduling")
+router = APIRouter(prefix="/scheduling")
 
 @router.post("/optimize")
 def optimize_schedule(tasks: List[Task]):

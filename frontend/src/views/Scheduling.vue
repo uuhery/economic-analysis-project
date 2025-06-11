@@ -84,7 +84,7 @@ export default {
     },
     async runSchedule() {
       try {
-        const res = await axios.post('http://localhost:8000/api/scheduling/optimize', this.scheduleTasks);
+        const res = await axios.post('/api/scheduling/optimize', this.scheduleTasks);
         this.scheduleResult = res.data.schedule;
       } catch (err) {
         alert('Schedule error: ' + err.message);
@@ -99,7 +99,7 @@ export default {
     },
     async runResourceBalance() {
       try {
-        const res = await axios.post('http://localhost:8000/api/scheduling/smooth', {
+        const res = await axios.post('/api/scheduling/smooth', {
           tasks: this.resourceTasks,
           ...this.resourceInput
         });

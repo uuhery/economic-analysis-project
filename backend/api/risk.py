@@ -4,7 +4,7 @@ from typing import List
 from models.risk_model import SensitivityRequest, DecisionPath, MonteCarloRequest
 from services.risk_analysis import sensitivity_analysis, decision_tree_analysis, monte_carlo_simulation
 
-router = APIRouter(prefix="/api/risk", tags=["Risk Analysis"])
+router = APIRouter(prefix="/risk", tags=["Risk Analysis"])
 
 
 @router.post("/sensitivity")

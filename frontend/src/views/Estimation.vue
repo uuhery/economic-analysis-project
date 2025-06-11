@@ -2,8 +2,8 @@
   <div>
     <h2>📈 Cost Estimation Panel</h2>
 
-    <div v-if="getComparisonRows().length > 0">
-      <h3>📋 Estimation Comparison Summary</h3>
+  <div v-if="comparisonRows.length > 0">
+    <h3>📋 Estimation Comparison Summary</h3>
       <table border="1">
         <thead>
           <tr>
@@ -16,7 +16,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in getComparisonRows()" :key="row.model">
+          <tr v-for="row in comparisonRows" :key="row.model">
             <td>{{ row.model }}</td>
             <td>{{ row.effort }}</td>
             <td>{{ row.time }}</td>
@@ -26,6 +26,12 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- 图表展示 -->
+    <div v-if="comparisonRows.length > 0" style="margin-top: 30px;">
+      <h3>📊 Cost Estimation Chart</h3>
+      <canvas id="comparisonChart" width="600" height="300"></canvas>
     </div>
 
     <hr />
@@ -70,7 +76,7 @@
 
       <button @click="addCostDriver">+ Add Cost Driver</button>
 
-      <button @click="calculateFP">Estimate</button>
+      <button @click="calculateFP" style="margin-left: 10px">Estimate</button>
 
       <div v-if="result.fp">
         <p>Raw FP: {{ result.fp.raw_fp }}</p>
@@ -127,74 +133,120 @@
 
     <!-- === Expert === -->
     <section>
-      <h3>Expert Estimation</h3>
-      <p class="description">
-        Input multiple expert estimates. The system calculates their average.
-      </p>
-      <div v-for="(v, idx) in expertList" :key="idx" style="margin-bottom: 4px;">
-        <input v-model.number="expertList[idx]" type="number" placeholder="Estimate value" />
+      <h3>Expert Judgment (Heuristic)</h3>
+      <p class="description">Estimate project cost based on expert opinions with confidence weighting.</p>
+
+      <div v-for="(expert, idx) in expertList" :key="idx" style="margin-bottom: 8px;">
+        <input v-model="expert.name" placeholder="Expert Name" style="width: 100px;" />
+        <input v-model.number="expert.estimate" type="number" placeholder="Estimate" style="width: 80px; margin-left: 8px;" />
+        <input v-model.number="expert.confidence" type="number" step="0.01" min="0" max="1" placeholder="Confidence (0~1)" style="width: 120px; margin-left: 8px;" />
         <button @click="removeExpert(idx)">🗑️</button>
       </div>
-      <button @click="addExpert">Add Estimate</button>
+
+      <button @click="addExpert">+ Add Expert</button>
       <button @click="calculateExpert">Estimate</button>
-      <p v-if="result.expert !== null">Average Estimate: {{ result.expert }}</p>
+
+      <div v-if="result.expert !== null">
+        <p><strong>Weighted Average:</strong> {{ result.expert.weighted_average }}</p>
+        <p><strong>Standard Deviation:</strong> {{ result.expert.std_deviation }}</p>
+        <p><strong>Estimate Range:</strong> {{ result.expert.min }} ~ {{ result.expert.max }}</p>
+        <p><strong>Confidence Summary:</strong> {{ result.expert.avg_confidence }}</p>
+      </div>
     </section>
 
     <hr />
 
     <!-- === Delphi === -->
     <section>
-      <h3>Delphi Method</h3>
+      <h3>Delphi Method (Heuristic)</h3>
       <p class="description">
-        Enter expert estimates in multiple rounds. Each round represents anonymous feedback iteration.
+        Enter expert estimates for each round. The system checks convergence after each round.
       </p>
 
-      <div v-for="(round, roundIdx) in delphiRounds" :key="roundIdx" style="margin-bottom: 8px;">
-        <p>Round {{ roundIdx + 1 }}</p>
-        <div v-for="(v, vIdx) in round" :key="vIdx" style="display: inline-block; margin-right: 4px;">
-          <input v-model.number="delphiRounds[roundIdx][vIdx]" type="number" style="width: 60px;" />
+      <!-- 各轮专家输入 -->
+      <div v-for="(round, roundIdx) in delphiRounds" :key="roundIdx" style="margin-bottom: 12px;">
+        <p><strong>Round {{ roundIdx + 1 }}</strong></p>
+        <div v-for="(value, idx) in round" :key="idx" style="display: inline-block; margin-right: 6px;">
+          <input v-model.number="delphiRounds[roundIdx][idx]" type="number" placeholder="Estimate" style="width: 80px;" />
         </div>
-        <button @click="removeDelphiRound(roundIdx)">🗑️</button>
       </div>
 
-      <button @click="addDelphiRound">Add Round</button>
-      <button @click="calculateDelphi">Estimate</button>
+      <button @click="addDelphiExpert">+ Add Expert to Current Round</button>
+      <button @click="addDelphiRound" style="margin-left: 10px">➕ Add New Round</button>
+      <button @click="calculateDelphi" style="margin-left: 10px">Estimate</button>
 
-      <div v-if="result.delphi">
-        <p>Final Estimate: {{ result.delphi.final_estimate }}</p>
-        <p>Standard Deviation: {{ result.delphi.std_deviation }}</p>
-        <p>Rounds Count: {{ result.delphi.rounds_count }}</p>
+      <!-- 系统反馈 -->
+      <div v-if="delphiResult">
+        <h4>📊 System Feedback</h4>
+        <ul>
+          <li><strong>Final Estimate:</strong> {{ delphiResult.final_estimate }}</li>
+          <li><strong>Rounds:</strong> {{ delphiResult.rounds_count }}</li>
+          <li><strong>Standard Deviation:</strong> {{ delphiResult.std_deviation }}</li>
+          <li><strong>Convergence:</strong> {{ delphiResult.convergence ? '✅ Yes' : '❌ No' }}</li>
+        </ul>
+
+        <h5>Estimate History</h5>
+        <ul>
+          <li v-for="r in delphiResult.estimate_history" :key="r.round">
+            Round {{ r.round }} → Mean: {{ r.mean }}, Std: {{ r.std }}
+          </li>
+        </ul>
+
+        <div v-if="!delphiResult.convergence">
+          <p style="color: green;"><em>Suggest entering a new round with values near mean {{ delphiResult.estimate_history.at(-1).mean }}</em></p>
+          <button @click="addDelphiFromSuggestion">Add Round Based on Last Mean</button>
+        </div>
+
+        <div v-else>
+          <p style="color: blue;"><strong>🛑 Convergence reached. No more rounds needed.</strong></p>
+        </div>
       </div>
     </section>
+
 
     <hr />
 
     <!-- === Regression === -->
     <section>
-      <h3>Regression Model</h3>
-      <p class="description">
-        Enter data pairs (x, y) for linear regression analysis. Each point represents one observation.
-      </p>
+      <h3>📈 Regression via File Upload</h3>
 
-      <div v-for="(pair, idx) in regressionPairs" :key="idx" style="margin-bottom: 4px;">
-        <input v-model.number="regressionPairs[idx][0]" placeholder="x" style="width: 60px;" />
-        <input v-model.number="regressionPairs[idx][1]" placeholder="y" style="width: 60px; margin-left: 10px;" />
-        <button @click="removeRegression(idx)">🗑️</button>
+      <!-- 上传文件 -->
+      <input type="file" @change="handleFileUpload" accept=".csv,.xlsx" />
+
+      <!-- 选择列 & 输入预测 -->
+      <div v-if="regressionColumns.length" style="margin-top: 12px;">
+        <label>X (Independent Variable):</label>
+        <select v-model="selectedX">
+          <option v-for="col in regressionColumns" :key="col" :value="col">{{ col }}</option>
+        </select>
+
+        <label>Y (Dependent Variable):</label>
+        <select v-model="selectedY">
+          <option v-for="col in regressionColumns" :key="col" :value="col">{{ col }}</option>
+        </select>
+
+        <label>Predict X:</label>
+        <input v-model.number="predictX" type="number" placeholder="e.g. 25" />
+
+        <button @click="submitRegression">Run Regression</button>
       </div>
-      <button @click="addRegression">Add Pair</button>
-      <button @click="calculateRegression">Estimate</button>
-      <div v-if="result.regression">
-        <p>Intercept (a): {{ result.regression.intercept_a }}</p>
-        <p>Slope (b): {{ result.regression.slope_b }}</p>
-        <p>Sample Count: {{ result.regression.sample_count }}</p>
-        <p>Predicted Y (x=100): {{ result.regression.example_prediction_x100 }}</p>
+
+      <!-- 展示结果 -->
+      <div v-if="regressionResult" style="margin-top: 16px;">
+        <h4>📊 Regression Result</h4>
+        <p><strong>Formula:</strong> {{ regressionResult.regression_formula }}</p>
+        <p><strong>Prediction:</strong> y({{ predictX }}) = {{ regressionResult.predict_y }}</p>
+        <p><strong>R²:</strong> {{ regressionResult.r_squared }}</p>
+        <p><strong>Samples:</strong> {{ regressionResult.sample_count }}</p>
       </div>
     </section>
+
   </div>
 </template>
 
 <script>
 import axios from 'axios'
+import Chart from 'chart.js'
 
 export default {
   name: 'EstimationView',
@@ -240,26 +292,32 @@ export default {
         }
       },
       expertInput: '',
-      expertList: [100, 120, 110],
-      delphiInput: '',
+      expertList: [
+        { name: 'Alice', estimate: 100, confidence: 0.9 },
+        { name: 'Bob', estimate: 120, confidence: 0.7 },
+        { name: 'Carol', estimate: 110, confidence: 0.8 }
+      ],
       delphiRounds: [
-        [100, 110, 120],
-        [105, 108, 112],
-        [106, 107, 109]
+        [100, 110, 120]
       ],
-      regressionInput: '',
-      regressionPairs: [
-        [10, 100],
-        [20, 200],
-        [30, 300]
-      ],
+      delphiThreshold: 5.0,  // 收敛阈值
+      delphiResult: null,
+      delphiConverged: false,
+      regressionFile: null,
+      regressionColumns: [],
+      selectedX: '',
+      selectedY: '',
+      predictX: null,
+      regressionResult: null,
       result: {
         cocomo: null,
         fp: null,
         expert: null,
         delphi: null,
         regression: null
-      }
+      },
+      chartInstance: null,
+      comparisonRows: []
     }
   },
   methods: {
@@ -281,10 +339,11 @@ export default {
         }
 
         const res = await axios.post(
-            'http://localhost:8000/api/estimation/function_points',
+            '/api/estimation/function_points',
             payload
         )
         this.result.fp = res.data
+        this.generateComparisonRows();
       } catch (err) {
         console.error(err)
         alert(err.response?.data?.detail || err.message)
@@ -303,56 +362,130 @@ export default {
           cost_per_pm: this.cocomo.cost_per_pm
         }
         const res = await axios.post(
-            'http://localhost:8000/api/estimation/cocomo',
+            '/api/estimation/cocomo',
             payload
         )
         this.result.cocomo = res.data
         localStorage.setItem("estimated_cost", res.data.total_cost.toString())
+        this.generateComparisonRows();
       } catch (err) {
         console.error(err)
         alert(err.response?.data?.detail || err.message)
       }
     },
-    addExpert() { this.expertList.push(0); },
-    removeExpert(index) { this.expertList.splice(index, 1); },
+    addExpert() {
+      this.expertList.push({ name: '', estimate: 0, confidence: 1.0 });
+    },
+    removeExpert(index) {
+      this.expertList.splice(index, 1);
+    },
     async calculateExpert() {
-      const valid = this.expertList.filter(x => !isNaN(x));
-      const res = await axios.post('http://localhost:8000/api/estimation/expert', {
-        estimates: valid
+      const filtered = this.expertList.filter(x =>
+        !isNaN(x.estimate) && !isNaN(x.confidence) && x.confidence >= 0 && x.confidence <= 1
+      );
+
+      if (filtered.length === 0) {
+        alert("Please input at least one valid expert entry.");
+        return;
+      }
+
+      const res = await axios.post("/api/estimation/expert", {
+        experts: filtered
       });
-      this.result.expert = res.data.average_estimate;
+
+      this.result.expert = res.data;
+      this.generateComparisonRows();
     },
-    // methods:
+    addDelphiExpert() {
+      if (this.delphiRounds.length === 0) {
+        this.delphiRounds.push([]);
+      }
+
+      const lastIndex = this.delphiRounds.length - 1;
+      const newRound = [...this.delphiRounds[lastIndex], 0];  // 拷贝原有数组 + 添加一个新值
+
+      // 替换整轮，确保 Vue 能检测到更新
+      this.$set(this.delphiRounds, lastIndex, newRound);
+    },
     addDelphiRound() {
-      this.delphiRounds.push([0, 0, 0]);
+      this.delphiRounds.push([]);
     },
-    removeDelphiRound(idx) {
-      this.delphiRounds.splice(idx, 1);
+    addDelphiFromSuggestion() {
+      const lastMean = this.delphiResult.estimate_history.at(-1).mean;
+      const expertCount = this.delphiRounds[this.delphiRounds.length - 1].length || 3;
+      const newRound = Array(expertCount).fill(Number((lastMean).toFixed(1)));
+      this.delphiRounds.push(newRound);
     },
     async calculateDelphi() {
-      const rounds = this.delphiRounds.map(r =>
-          r.filter(x => !isNaN(x))
-      ).filter(r => r.length > 0);
+      const cleanRounds = this.delphiRounds.map(r => r.filter(x => !isNaN(x)));
+      if (cleanRounds.length === 0 || cleanRounds.at(-1).length === 0) {
+        alert("Please input at least one round of estimates.");
+        return;
+      }
 
-      const res = await axios.post('http://localhost:8000/api/estimation/delphi', {
-        rounds
-      });
-      this.result.delphi = res.data;
+      try {
+        const res = await axios.post('/api/estimation/delphi', {
+          rounds: cleanRounds,
+          convergence_threshold: this.delphiThreshold
+        });
+        this.delphiResult = res.data;
+        this.result.delphi = res.data;
+        this.delphiConverged = res.data.convergence;
+        this.generateComparisonRows();
+      } catch (err) {
+        console.error(err);
+        alert(err.response?.data?.detail || err.message);
+      }
     },
-    // methods:
-    addRegression() {
-      this.regressionPairs.push([0, 0]);
+    // 读取文件，提取列名（模拟预处理，只展示文件名）
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      this.regressionFile = file;
+
+      // 简化模拟：假设服务端会读取列名，但也可以本地读取 CSV
+      // 为了体验流畅，这里直接手动输入测试列名
+      const filename = file.name.toLowerCase();
+      if (filename.endsWith('.csv') || filename.endsWith('.xlsx')) {
+        // 👇可以改为发送到后端获得真实列名，这里用默认
+        this.regressionColumns = ['KLOC', 'Cost', 'Effort', 'Function Points']; // 示例列名
+        this.selectedX = this.regressionColumns[0];
+        this.selectedY = this.regressionColumns[1];
+      } else {
+        alert("Only CSV or XLSX supported.");
+      }
     },
-    removeRegression(idx) {
-      this.regressionPairs.splice(idx, 1);
+
+    // 发送到 FastAPI 接口
+    async submitRegression() {
+      if (!this.regressionFile || !this.selectedX || !this.selectedY || this.predictX === null) {
+        alert("Please complete file, column selections and input.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", this.regressionFile);
+      formData.append("x_column", this.selectedX);
+      formData.append("y_column", this.selectedY);
+      formData.append("predict_x", this.predictX);
+
+      try {
+        const res = await fetch("/api/estimation/regression", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!res.ok) throw new Error("Server error");
+        const data = await res.json();
+        this.regressionResult = data;
+        this.generateComparisonRows();
+      } catch (err) {
+        console.error(err);
+        alert("Regression failed: " + err.message);
+      }
     },
-    async calculateRegression() {
-      const data = this.regressionPairs
-          .filter(pair => pair.length === 2 && pair.every(x => !isNaN(x)));
-      const res = await axios.post('http://localhost:8000/api/estimation/regression', { data });
-      this.result.regression = res.data;
-    },
-    getComparisonRows() {
+    generateComparisonRows() {
       const rows = [];
 
       if (this.result.cocomo) {
@@ -383,7 +516,7 @@ export default {
           effort: '—',
           time: '—',
           team: '—',
-          cost: this.result.expert,
+          cost: this.result.expert.weighted_average,
           comment: 'Average of expert inputs'
         });
       }
@@ -399,19 +532,59 @@ export default {
         });
       }
 
-      if (this.result.regression) {
+      if (this.regressionResult) {
         rows.push({
           model: 'Regression Model',
           effort: '—',
           time: '—',
           team: '—',
-          cost: this.result.regression.example_prediction_x100,
-          comment: `y(x=100)`
+          cost: this.regressionResult.predict_y,
+          comment: `y(x=${this.predictX})`
         });
       }
 
-      return rows;
+      this.comparisonRows = rows;
+      this.renderComparisonChart();
+    },
+
+    renderComparisonChart() {
+      const ctx = document.getElementById("comparisonChart");
+      if (!ctx) return;
+
+      // 🔥 只过滤出非 Function Point 的模型
+      const filteredRows = this.comparisonRows.filter(r => r.model !== 'Function Point');
+
+      const labels = filteredRows.map(r => r.model);
+      const costs = filteredRows.map(r => {
+        const value = Number(r.cost);
+        return isNaN(value) ? 0 : value;
+      });
+
+      if (this.chartInstance) {
+        this.chartInstance.destroy();
+      }
+
+      this.chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Estimated Cost",
+            data: costs,
+            backgroundColor: "rgba(75, 192, 192, 0.6)",
+            borderColor: "rgba(75, 192, 192, 1)",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {beginAtZero: true}
+          }
+        }
+      });
     }
+
   }
 }
 </script>

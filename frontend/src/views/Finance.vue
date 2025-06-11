@@ -87,7 +87,7 @@ export default {
     },
     async calculateNPV() {
       try {
-        const res = await axios.post('http://localhost:8000/api/finance/npv', {
+        const res = await axios.post('/api/finance/npv', {
           cash_flows: this.parseCashFlows(),
           discount_rate: this.discountRate / 100
         });
@@ -101,7 +101,7 @@ export default {
     },
     async calculateROI() {
       try {
-        const res = await axios.post('http://localhost:8000/api/finance/roi', {
+        const res = await axios.post('/api/finance/roi', {
           gain: this.roiGain,
           cost: this.roiCost
         });
@@ -112,7 +112,7 @@ export default {
     },
     async calculateIRR() {
       try {
-        const res = await axios.post('http://localhost:8000/api/finance/irr', {
+        const res = await axios.post('/api/finance/irr', {
           cash_flows: this.parseCashFlows()
         });
         this.results.irr = res.data.irr_percent;
@@ -122,7 +122,7 @@ export default {
     },
     async calculatePayback() {
       try {
-        const res = await axios.post('http://localhost:8000/api/finance/payback', {
+        const res = await axios.post('/api/finance/payback', {
           cash_flows: this.parseCashFlows()
         });
         this.results.payback = res.data.payback_period;

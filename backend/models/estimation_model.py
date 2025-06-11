@@ -14,11 +14,18 @@ class CocomoRequest(BaseModel):
     cost_drivers: Dict[str, str]
     cost_per_pm: float  # 每人月成本（例如：￥10,000）
 
+class ExpertEntry(BaseModel):
+    name: str = None
+    estimate: float
+    confidence: float  # 0 ~ 1
+
 class ExpertRequest(BaseModel):
-    estimates: List[float]
+    experts: List[ExpertEntry]
 
 class DelphiRequest(BaseModel):
     rounds: List[List[float]]
+    convergence_threshold: float = 5.0  # 可选字段，默认值为5
 
 class RegressionRequest(BaseModel):
-    data: List[Tuple[float, float]]
+    data: List[List[float]]  # [[x, y], [x, y], ...]
+    predict_x: float
