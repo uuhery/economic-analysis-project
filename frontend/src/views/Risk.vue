@@ -13,8 +13,6 @@
       <canvas v-if="sensitivity.result.length" id="sensitivityChart" class="chart-canvas"></canvas>
     </section>
 
-    <hr />
-
     <!-- 决策树分析 -->
     <section>
       <h3>Decision Tree</h3>
@@ -27,8 +25,6 @@
       <button @click="runDecisionTree">Run</button>
       <p v-if="decisionTree.result !== null">Expected Value: {{ decisionTree.result }}</p>
     </section>
-
-    <hr />
 
     <!-- 蒙特卡洛模拟 -->
     <section>
@@ -135,16 +131,69 @@ export default {
 
 <style scoped>
 section {
-  margin-bottom: 24px;
+  margin-bottom: 40px;
+  padding: 20px;
+  background-color: #f9fcff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.08);
+  border: 1px solid #d6e9ff;
 }
+
+/* 标题风格 */
+h2, h3 {
+  color: #007BFF;
+  margin-bottom: 16px;
+  font-weight: 600;
+  font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+}
+
+/* 输入框 */
 input {
-  margin: 4px;
+  width: 220px;
+  padding: 6px 10px;
+  margin: 6px 10px 6px 0;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  transition: border-color 0.2s ease;
 }
+input:focus {
+  border-color: #007BFF;
+  outline: none;
+}
+
+/* 按钮样式 */
+button {
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 6px 8px 6px 0;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+button:hover {
+  background-color: #0056b3;
+}
+
+/* 图表容器 */
 .chart-canvas {
-  width: 800px !important;
-  height: 450px !important;
+  width: 100% !important;
+  max-width: 800px;
+  height: 420px !important;
   display: block;
-  margin: 0 auto;
+  margin: 20px auto 0;
+}
+
+/* 段落与文本输出 */
+p {
+  font-size: 15px;
+  color: #333;
+  margin: 10px 0 0;
+}
+strong {
+  color: #0056b3;
 }
 
 

@@ -17,8 +17,6 @@
       <p v-if="results.npv !== null"><strong>NPV:</strong> {{ results.npv }}</p>
     </section>
 
-    <hr />
-
     <!-- ROI -->
     <section>
       <h3>ROI (Return on Investment)</h3>
@@ -33,16 +31,12 @@
       <p v-if="results.roi !== null"><strong>ROI:</strong> {{ results.roi }}%</p>
     </section>
 
-    <hr />
-
     <!-- IRR -->
     <section>
       <h3>IRR (Internal Rate of Return)</h3>
       <button @click="calculateIRR">Calculate IRR</button>
       <p v-if="results.irr !== null">IRR: {{ results.irr }}%</p>
     </section>
-
-    <hr />
 
     <!-- Payback Period -->
     <section>
@@ -137,16 +131,75 @@ export default {
 <style scoped>
 section {
   margin-bottom: 40px;
+  padding: 20px;
+  background-color: #f9fcff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.1);
+  border: 1px solid #d6e9ff;
 }
+
+/* 标题风格统一 */
+h2, h3 {
+  color: #007BFF;
+  margin-bottom: 16px;
+  font-weight: 600;
+  font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+}
+
+/* 标签和描述 */
 label {
   display: block;
   margin-top: 10px;
+  font-weight: 500;
+  color: #333;
 }
+
+.description {
+  color: #666;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+/* 输入框美化 */
 input {
-  margin-bottom: 10px;
-  width: 200px;
+  width: 260px;
+  padding: 6px 12px;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  transition: border-color 0.2s ease;
 }
+input:focus {
+  border-color: #007BFF;
+  outline: none;
+}
+
+/* 按钮统一蓝色圆角样式 */
 button {
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
   margin-top: 10px;
+  margin-right: 10px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
 }
+button:hover {
+  background-color: #0056b3;
+}
+
+/* 输出结果样式 */
+p {
+  font-size: 15px;
+  margin-top: 6px;
+}
+
+strong {
+  color: #0056b3;
+}
+
 </style>

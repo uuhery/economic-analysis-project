@@ -34,7 +34,6 @@
       <canvas id="comparisonChart" width="600" height="300"></canvas>
     </div>
 
-    <hr />
     <!-- === Function Point === -->
     <section>
       <h3>Function Point Estimation</h3>
@@ -85,8 +84,6 @@
       </div>
     </section>
 
-    <hr />
-
     <!-- === COCOMO === -->
     <section>
       <h3>COCOMO Estimation</h3>
@@ -129,8 +126,6 @@
 
     </section>
 
-    <hr />
-
     <!-- === Expert === -->
     <section>
       <h3>Expert Judgment (Heuristic)</h3>
@@ -153,8 +148,6 @@
         <p><strong>Confidence Summary:</strong> {{ result.expert.avg_confidence }}</p>
       </div>
     </section>
-
-    <hr />
 
     <!-- === Delphi === -->
     <section>
@@ -203,8 +196,6 @@
       </div>
     </section>
 
-
-    <hr />
 
     <!-- === Regression === -->
     <section>
@@ -590,19 +581,100 @@ export default {
 </script>
 
 <style scoped>
+/* === 全局布局 === */
 section {
   margin-bottom: 40px;
+  padding: 20px;
+  background-color: #f9fcff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.1);
+  border: 1px solid #d6e9ff;
 }
+
+h2, h3, h4, h5 {
+  color: #007BFF;
+  margin-bottom: 16px;
+  font-weight: 600;
+  font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+}
+
+/* === 表单输入样式 === */
 label {
   display: inline-block;
-  width: 200px;
+  min-width: 160px;
+  font-weight: 500;
+  margin-bottom: 6px;
 }
+
 input, select {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
   margin-bottom: 10px;
   margin-right: 10px;
+  transition: border-color 0.2s ease;
 }
+input:focus, select:focus {
+  border-color: #007BFF;
+  outline: none;
+}
+
+/* === 按钮样式 === */
 button {
-  margin-top: 10px;
-  margin-bottom: 10px;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 10px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
 }
+button:hover {
+  background-color: #0056b3;
+}
+
+/* === 表格样式 === */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #cce5ff;
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.08);
+  margin-top: 12px;
+}
+th, td {
+  padding: 10px;
+  text-align: center;
+  border: 1px solid #d4ecff;
+}
+th {
+  background-color: #e7f3ff;
+  color: #0056b3;
+  font-weight: 600;
+}
+
+/* === Delphi 建议部分 === */
+em {
+  color: #28a745;
+  font-weight: 500;
+}
+
+ul {
+  list-style: none;
+  padding-left: 0;
+}
+li {
+  margin-bottom: 6px;
+}
+
+/* === 文件上传提示样式 === */
+input[type="file"] {
+  border: 1px dashed #007BFF;
+  padding: 6px;
+  border-radius: 6px;
+  background-color: #f0faff;
+  cursor: pointer;
+}
+
 </style>
