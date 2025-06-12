@@ -244,11 +244,11 @@ export default {
   data() {
     return {
       fpInputs: {
-        external_inputs: 0,
-        external_outputs: 0,
-        external_inquiries: 0,
-        internal_files: 0,
-        external_interfaces: 0
+        external_inputs: 50,
+        external_outputs: 40,
+        external_inquiries: 60,
+        internal_files: 20,
+        external_interfaces: 30
       },
       fpConfig: {
         language: 'java',
@@ -270,7 +270,7 @@ export default {
         external_interfaces: 'Average'
       },
       cocomo: {
-        loc: 15,
+        loc: 40,
         mode: 'organic',
         cost_per_pm: 10000,
         costDrivers: {
@@ -284,12 +284,12 @@ export default {
       },
       expertInput: '',
       expertList: [
-        { name: 'Alice', estimate: 100, confidence: 0.9 },
-        { name: 'Bob', estimate: 120, confidence: 0.7 },
-        { name: 'Carol', estimate: 110, confidence: 0.8 }
+        { name: 'Alice', estimate: 1300000, confidence: 0.9 },
+        { name: 'Bob', estimate: 1450000, confidence: 0.7 },
+        { name: 'Carol', estimate: 1400000, confidence: 0.8 }
       ],
       delphiRounds: [
-        [100, 110, 120]
+        [1500000, 1340000, 1289000]
       ],
       delphiThreshold: 5.0,  // 收敛阈值
       delphiResult: null,
@@ -333,7 +333,10 @@ export default {
             '/api/estimation/function_points',
             payload
         )
+        // axios.post('http://localhost:8000/estimation/function_points')
+
         this.result.fp = res.data
+        localStorage.setItem('fp_kloc', res.data.kloc.toString());
         this.generateComparisonRows();
       } catch (err) {
         console.error(err)
@@ -385,6 +388,7 @@ export default {
       });
 
       this.result.expert = res.data;
+      localStorage.setItem('expert_estimate', res.data.weighted_average.toString());
       this.generateComparisonRows();
     },
     addDelphiExpert() {
@@ -421,6 +425,7 @@ export default {
         });
         this.delphiResult = res.data;
         this.result.delphi = res.data;
+        localStorage.setItem('delphi_estimate', res.data.final_estimate.toString());
         this.delphiConverged = res.data.convergence;
         this.generateComparisonRows();
       } catch (err) {
@@ -466,10 +471,11 @@ export default {
           method: "POST",
           body: formData
         });
-
         if (!res.ok) throw new Error("Server error");
         const data = await res.json();
         this.regressionResult = data;
+        localStorage.setItem('regress_estimate', this.regressionResult.predict_y.toString());
+
         this.generateComparisonRows();
       } catch (err) {
         console.error(err);

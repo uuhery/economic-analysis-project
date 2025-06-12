@@ -5,77 +5,103 @@
     <!-- 任务排布优化 -->
     <section>
       <h3>Task Scheduling</h3>
-      <div v-for="(task, i) in scheduleTasks" :key="i">
+      <div v-for="(task, i) in scheduleTasks" :key="i" class="param-block">
         <input v-model="task.name" placeholder="Task name" />
-        <input v-model.number="task.duration" placeholder="Duration" type="number" />
-        <input v-model.number="task.deadline" placeholder="Deadline" type="number" />
-        <button @click="removeScheduleTask(i)">Remove</button>
+        <input v-model.number="task.duration" type="number" placeholder="Duration (e.g. 3)" />
+        <input v-model.number="task.deadline" type="number" placeholder="Deadline (e.g. 10)" />
+        <input v-model.number="task.priority" type="number" placeholder="Priority (1 = high)" />
+        <input v-model.number="task.earliest_start" type="number" placeholder="Earliest Start (e.g. 0)" />
+        <button @click="removeScheduleTask(i)" v-if="scheduleTasks.length > 1">Remove</button>
       </div>
-      <button @click="addScheduleTask">Add Task</button>
-      <button @click="runSchedule">Run Optimization</button>
+      <div class="button-row">
+        <button @click="loadSampleSchedule">Load Sample</button>
+        <button @click="addScheduleTask">Add Task</button>
+        <button @click="runSchedule">Run Optimization</button>
+      </div>
 
       <div v-if="scheduleResult.length">
         <h4>Schedule Result:</h4>
         <ul>
           <li v-for="r in scheduleResult" :key="r.name">
-            {{ r.name }}:
-            <span v-if="r.skipped">Skipped</span>
-            <span v-else>Start: {{ r.start }}, End: {{ r.end }}</span>
+            {{ r.name }} -
+            <span v-if="r.skipped">Skipped: {{ r.reason || 'No feasible slot' }}</span>
+            <span v-else>Start: {{ r.start }}, End: {{ r.end }}, Load: {{ r.resource_usage }}</span>
           </li>
         </ul>
       </div>
+
+      <canvas v-if="scheduleResult.length" id="scheduleChart" class="chart-canvas"></canvas>
+
     </section>
 
     <!-- 资源平滑与均衡 -->
     <section>
       <h3>Resource Smoothing</h3>
-      <div v-for="(task, i) in resourceTasks" :key="i">
+      <div v-for="(task, i) in resourceTasks" :key="i" class="param-block">
         <input v-model="task.name" placeholder="Task name" />
-        <input v-model.number="task.workload" placeholder="Workload" type="number" />
-        <button @click="removeResourceTask(i)">Remove</button>
+        <input v-model.number="task.workload" type="number" placeholder="Workload (e.g. 30)" />
+        <input v-model.number="task.flexibility" type="number" placeholder="Max Delay Tolerance (days)" />
+        <button @click="removeResourceTask(i)" v-if="resourceTasks.length > 1">Remove</button>
       </div>
-      <button @click="addResourceTask">Add Task</button>
       <div>
         <label>Total Resources:</label>
         <input v-model.number="resourceInput.total_resources" type="number" />
         <label>Total Time Slots:</label>
         <input v-model.number="resourceInput.total_time" type="number" />
       </div>
-      <button @click="runResourceBalance">Run Smoothing</button>
+      <div class="button-row">
+        <button @click="loadSampleResources">Load Sample</button>
+        <button @click="addResourceTask">Add Task</button>
+        <button @click="runResourceBalance">Run Smoothing</button>
+      </div>
 
       <div v-if="resourceResult.length">
         <h4>Allocation Result:</h4>
         <ul>
           <li v-for="r in resourceResult" :key="r.name">
-            {{ r.name }} - Time Slots: {{ r.slots }}, Per Slot: {{ r.allocated_per_slot }}
+            {{ r.name }} - Slots: {{ r.slots.join(', ') }} | Per Slot: {{ r.allocated_per_slot }}
           </li>
         </ul>
       </div>
+
+      <canvas v-if="resourceResult.length" id="resourceChart" class="chart-canvas"></canvas>
+
     </section>
   </div>
 </template>
 
 <script>
 import axios from 'axios';
+import Chart from "chart.js";
 
 export default {
   name: 'SchedulingView',
   data() {
     return {
-      scheduleTasks: [{ name: '', duration: 0, deadline: 0 }],
+      scheduleTasks: [{ name: '', duration: 0, deadline: 0, priority: 1, earliest_start: 0 }],
       scheduleResult: [],
 
-      resourceTasks: [{ name: '', workload: 0 }],
+      resourceTasks: [{ name: '', workload: 0, flexibility: 0 }],
       resourceInput: {
         total_resources: 100,
         total_time: 5
       },
-      resourceResult: []
+      resourceResult: [],
+      scheduleChart: null,
+      resourceChart: null
     };
   },
   methods: {
+    loadSampleSchedule() {
+      this.scheduleTasks = [
+        { name: 'Design', duration: 3, deadline: 10, priority: 2, earliest_start: 0 },
+        { name: 'Development', duration: 5, deadline: 15, priority: 1, earliest_start: 3 },
+        { name: 'Testing', duration: 2, deadline: 18, priority: 3, earliest_start: 10 },
+        { name: 'Deployment', duration: 1, deadline: 20, priority: 2, earliest_start: 15 }
+      ];
+    },
     addScheduleTask() {
-      this.scheduleTasks.push({ name: '', duration: 0, deadline: 0 });
+      this.scheduleTasks.push({ name: '', duration: 0, deadline: 0, priority: 1, earliest_start: 0 });
     },
     removeScheduleTask(i) {
       this.scheduleTasks.splice(i, 1);
@@ -84,16 +110,76 @@ export default {
       try {
         const res = await axios.post('/api/scheduling/optimize', this.scheduleTasks);
         this.scheduleResult = res.data.schedule;
+        this.$nextTick(() => this.drawScheduleChart());
+        this.$nextTick(() => this.drawGanttChart(this.scheduleResult));
+        localStorage.setItem('schedule_result', JSON.stringify(this.scheduleResult));
       } catch (err) {
         alert('Schedule error: ' + err.message);
       }
     },
+    drawScheduleChart() {
+      const tasks = this.scheduleResult.filter(t => !t.skipped);
+      const labels = tasks.map(t => t.name);
+      const starts = tasks.map(t => t.start);
+      const durations = tasks.map(t => t.end - t.start);
+
+      const ctx = document.getElementById('scheduleChart').getContext('2d');
+      if (this.scheduleChart) this.scheduleChart.destroy(); // 避免重叠
+      this.scheduleChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Start Time',
+            data: starts,
+            backgroundColor: '#90caf9'
+          }, {
+            label: 'Duration',
+            data: durations,
+            backgroundColor: '#42a5f5'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Task Scheduling (Start + Duration)',
+              font: { size: 16 }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              title: { display: true, text: 'Tasks' }
+            },
+            y: {
+              stacked: true,
+              beginAtZero: true,
+              title: { display: true, text: 'Time' }
+            }
+          }
+        }
+      });
+    },
 
     addResourceTask() {
-      this.resourceTasks.push({ name: '', workload: 0 });
+      this.resourceTasks.push({ name: '', workload: 0, flexibility: 0 });
     },
     removeResourceTask(i) {
       this.resourceTasks.splice(i, 1);
+    },
+    loadSampleResources() {
+      this.resourceTasks = [
+        { name: 'UI Implementation', workload: 30, flexibility: 2 },
+        { name: 'Backend API', workload: 40, flexibility: 1 },
+        { name: 'Database Setup', workload: 20, flexibility: 3 },
+        { name: 'Integration', workload: 25, flexibility: 0 }
+      ];
+      this.resourceInput = {
+        total_resources: 100,
+        total_time: 5
+      };
     },
     async runResourceBalance() {
       try {
@@ -102,10 +188,50 @@ export default {
           ...this.resourceInput
         });
         this.resourceResult = res.data.allocation;
+        localStorage.setItem('resource_result', JSON.stringify(this.resourceResult));
+        this.$nextTick(() => this.drawResourceChart());
       } catch (err) {
         alert('Resource balance error: ' + err.message);
       }
+    },
+    drawResourceChart() {
+      const labels = this.resourceResult.map(t => t.name);
+      const slots = this.resourceResult.map(t => t.slots.length);
+      const perSlot = this.resourceResult.map(t => t.allocated_per_slot);
+
+      const ctx = document.getElementById('resourceChart').getContext('2d');
+      if (this.resourceChart) this.resourceChart.destroy();
+      this.resourceChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Total Time Slots',
+            data: slots,
+            backgroundColor: '#81c784'
+          }, {
+            label: 'Resources per Slot',
+            data: perSlot,
+            backgroundColor: '#388e3c'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Resource Allocation (Slots & Intensity)',
+              font: { size: 16 }
+            }
+          },
+          scales: {
+            x: { stacked: true, title: { display: true, text: 'Tasks' } },
+            y: { stacked: false, beginAtZero: true, title: { display: true, text: 'Value' } }
+          }
+        }
+      });
     }
+
   }
 };
 </script>
@@ -120,7 +246,6 @@ section {
   border: 1px solid #d6e9ff;
 }
 
-/* 标题样式统一 */
 h2, h3, h4 {
   color: #007BFF;
   font-weight: 600;
@@ -128,7 +253,6 @@ h2, h3, h4 {
   margin-bottom: 16px;
 }
 
-/* 输入框统一 */
 input {
   width: 200px;
   padding: 6px 10px;
@@ -142,7 +266,6 @@ input:focus {
   outline: none;
 }
 
-/* 按钮风格一致 */
 button {
   background-color: #007BFF;
   color: white;
@@ -158,14 +281,12 @@ button:hover {
   background-color: #0056b3;
 }
 
-/* Label 样式增强 */
 label {
   display: inline-block;
   margin: 8px 10px 6px 0;
   font-weight: 500;
 }
 
-/* 列表展示样式优化 */
 ul {
   list-style: disc;
   padding-left: 20px;
@@ -174,5 +295,4 @@ ul {
 li {
   margin: 4px 0;
 }
-
 </style>

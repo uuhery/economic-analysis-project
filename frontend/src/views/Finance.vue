@@ -8,7 +8,11 @@
       <p class="description">Calculate discounted cash flows over time. You may use cost estimation results as the initial investment.</p>
 
       <label>Cash Flows (comma-separated):</label>
-      <input v-model="cashFlowInput" placeholder="-1000,300,400,500" />
+      <input
+        v-model="cashFlowInput"
+        placeholder="-1000, 300, 400, 500"
+        title="Enter yearly cash flows separated by commas, e.g., -1000,300,400"
+      />
       <button @click="fillFromEstimation">📥 Use Estimated Cost as Initial</button>
 
       <label>Discount Rate (%):</label>
@@ -81,11 +85,13 @@ export default {
     },
     async calculateNPV() {
       try {
+        localStorage.setItem("calculated_cash_flows", this.cashFlowInput);
         const res = await axios.post('/api/finance/npv', {
           cash_flows: this.parseCashFlows(),
           discount_rate: this.discountRate / 100
         });
         this.results.npv = res.data.npv;
+        // 假设 result 是你前面计算出来的 NPV 结果
       } catch (err) {
         alert('NPV error: ' + (err.response?.data?.detail || err.message));
       }
