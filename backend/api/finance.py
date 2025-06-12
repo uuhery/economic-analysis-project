@@ -1,9 +1,10 @@
+from typing import List
 from fastapi import APIRouter, HTTPException
 
-from models.finance_model import CashFlowModel, ROIModel, EstimatesModel
+from models.finance_model import CashFlowModel, ROIModel, EstimatesModel, BudgetModel
 
 from services.finance_calculator import (
-    calculate_npv, calculate_roi, calculate_irr, calculate_payback
+    calculate_npv, calculate_roi, calculate_irr, calculate_payback, track_budget, analyze_variance, forecast_next_phase
 )
 
 router = APIRouter(prefix="/finance", tags=["Finance"])
@@ -43,5 +44,35 @@ def payback(data: EstimatesModel):
         if result == -1:
             return {"payback_period": None, "message": "Investment never recovered"}
         return {"payback_period": result}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Budget-tracking
+@router.post("/budget-tracking")
+def budget_tracking(data: List[BudgetModel]):
+    try:
+        raw_data = [item.dict() for item in data]
+        result = track_budget(raw_data)
+        return {"tracked": result}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+# Variance Analysis
+@router.post("/variance-analysis")
+def variance_analysis(data: List[BudgetModel]):
+    try:
+        raw_data = [item.dict() for item in data]
+        result = analyze_variance(raw_data)
+        return {"analysis": result}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+# Forecast
+@router.post("/forecast")
+def forecast(data: List[BudgetModel]):
+    try:
+        raw_data = [item.dict() for item in data]
+        result = forecast_next_phase(raw_data)
+        return {"forecast": result}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
