@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h2>Scheduling & Resource Optimization</h2>
+    <h2>📅 Scheduling & Resource Optimization</h2>
 
     <!-- 任务排布优化 -->
     <section>

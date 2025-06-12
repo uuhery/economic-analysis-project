@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h2>Risk Analysis Dashboard</h2>
+    <h2>⚠️ Risk Analysis Dashboard</h2>
 
         <!-- 敏感性分析 -->
     <section>
@@ -357,7 +357,16 @@ input {
   border: 1px solid #ccc;
   transition: border-color 0.2s ease;
 }
-input:focus {
+
+select {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  margin-bottom: 10px;
+  margin-right: 10px;
+  transition: border-color 0.2s ease;
+}
+input:focus, select:focus {
   border-color: #007BFF;
   outline: none;
 }
