@@ -8,11 +8,7 @@
       <p class="description">Calculate discounted cash flows over time. You may use cost estimation results as the initial investment.</p>
 
       <label>Cash Flows (comma-separated):</label>
-      <input
-        v-model="cashFlowInput"
-        placeholder="-1000, 300, 400, 500"
-        title="Enter yearly cash flows separated by commas, e.g., -1000,300,400"
-      />
+      <input v-model="cashFlowInput" placeholder="-1000,300,400,500" />
       <button @click="fillFromEstimation">📥 Use Estimated Cost as Initial</button>
 
       <label>Discount Rate (%):</label>
@@ -49,6 +45,107 @@
       <p v-if="results.payback !== null">Payback Period: {{ results.payback }} years</p>
       <p v-if="results.payback === null">Investment never recovered</p>
     </section>
+
+    <!-- Budget Tracking -->
+    <section>
+      <h3>📊 Budget Tracking</h3>
+      <p class="description">Enter project phases with their budgeted and actual costs.</p>
+
+      <div v-for="(item, index) in budgetItems" :key="index" style="margin-bottom: 12px;">
+        <label>Phase {{ index + 1 }}:</label>
+        <input v-model="item.phase" placeholder="e.g. Design Phase" />
+
+        <label>Budgeted:</label>
+        <input v-model.number="item.budgeted_amount" type="number" placeholder="e.g. 5000" />
+
+        <label>Actual:</label>
+        <input v-model.number="item.actual_amount" type="number" placeholder="e.g. 4800" />
+      </div>
+
+      <button @click="addBudgetItem">➕ Add Phase</button>
+      <button @click="trackBudget">Track Budget</button>
+
+      <div v-if="trackedBudget.length > 0" style="margin-top: 20px;">
+        <h4>Tracked Results</h4>
+        <table border="1" cellpadding="8">
+          <thead>
+            <tr>
+              <th>Phase</th>
+              <th>Budgeted</th>
+              <th>Actual</th>
+              <th>Variance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(entry, i) in trackedBudget" :key="i">
+              <td>{{ entry.phase }}</td>
+              <td>{{ entry.budgeted_amount }}</td>
+              <td>{{ entry.actual_amount }}</td>
+              <td :style="{ color: entry.difference > 0 ? 'red' : (entry.difference < 0 ? 'green' : 'black') }">
+                {{ entry.difference }}
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="font-weight: bold;">
+              <td>Total</td>
+              <td>{{ budgetTotals.budgeted }}</td>
+              <td>{{ budgetTotals.actual }}</td>
+              <td :style="{ color: budgetTotals.difference > 0 ? 'red' : (budgetTotals.difference < 0 ? 'green' : 'black') }">
+                {{ budgetTotals.difference }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- Variance Analysis -->
+    <section>
+      <h3>📉 Variance Analysis</h3>
+      <p class="description">Analyze cost deviations for each project phase.</p>
+      <button @click="analyzeVariance">📊 Analyze Variance</button>
+
+      <table v-if="varianceResults.length > 0" border="1" cellpadding="8" style="margin-top: 16px;">
+        <thead>
+          <tr>
+            <th>Phase</th>
+            <th>Budgeted</th>
+            <th>Actual</th>
+            <th>Variance</th>
+            <th>% Variance</th>
+            <th>Analysis</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(entry, i) in varianceResults" :key="i">
+            <td>{{ entry.phase }}</td>
+            <td>{{ entry.budgeted_amount }}</td>
+            <td>{{ entry.actual_amount }}</td>
+            <td>{{ entry.difference }}</td>
+            <td>{{ entry.percent_variance }}%</td>
+            <td :style="{ color: entry.analysis === 'Overspent' ? 'red' : entry.analysis === 'Underspent' ? 'green' : 'black' }">
+              {{ entry.analysis }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Forecasting -->
+    <section>
+      <h3>🔮 Forecasting</h3>
+      <p class="description">Predict next phase based on previous budget trends.</p>
+      <button @click="forecast">🔁 Run Forecast</button>
+
+      <div v-if="forecastResult" style="margin-top: 20px;">
+        <p><strong>Phase:</strong> {{ forecastResult.forecast_phase }}</p>
+        <p><strong>Forecasted Budget:</strong> {{ forecastResult.forecast_budgeted }}</p>
+        <p><strong>Forecasted Actual:</strong> {{ forecastResult.forecast_actual }}</p>
+        <p><strong>Budget Growth Rate:</strong> {{ forecastResult.budget_growth_rate }}%</p>
+        <p><strong>Actual Growth Rate:</strong> {{ forecastResult.actual_growth_rate }}%</p>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -69,7 +166,18 @@ export default {
         roi: null,
         irr: null,
         payback: null
-      }
+      },
+      budgetItems: [
+        { phase: "Design", budgeted_amount: 5000, actual_amount: 4800 }
+      ],
+      trackedBudget: [],
+      budgetTotals: {
+        budgeted: 0,
+        actual: 0,
+        difference: 0
+      },
+      varianceResults: [],
+      forecastResult: null
     };
   },
   methods: {
@@ -85,13 +193,11 @@ export default {
     },
     async calculateNPV() {
       try {
-        localStorage.setItem("calculated_cash_flows", this.cashFlowInput);
         const res = await axios.post('/api/finance/npv', {
           cash_flows: this.parseCashFlows(),
           discount_rate: this.discountRate / 100
         });
         this.results.npv = res.data.npv;
-        // 假设 result 是你前面计算出来的 NPV 结果
       } catch (err) {
         alert('NPV error: ' + (err.response?.data?.detail || err.message));
       }
@@ -128,6 +234,41 @@ export default {
         this.results.payback = res.data.payback_period;
       } catch (err) {
         alert('Payback error: ' + (err.response?.data?.detail || err.message));
+      }
+    },
+    addBudgetItem() {
+    this.budgetItems.push({ phase: "", budgeted_amount: 0, actual_amount: 0 });
+    },
+    async trackBudget() {
+      try {
+        const res = await axios.post('/api/finance/budget-tracking', this.budgetItems);
+        this.trackedBudget = res.data.tracked;
+
+        // 汇总计算
+        this.budgetTotals = this.trackedBudget.reduce((totals, item) => {
+          totals.budgeted += item.budgeted_amount;
+          totals.actual += item.actual_amount;
+          totals.difference += item.difference;
+          return totals;
+        }, { budgeted: 0, actual: 0, difference: 0 });
+      } catch (err) {
+        alert("Budget tracking error: " + (err.response?.data?.detail || err.message));
+      }
+    },
+    async analyzeVariance() {
+      try {
+        const res = await axios.post('/api/finance/variance-analysis', this.budgetItems);
+        this.varianceResults = res.data.analysis;
+      } catch (err) {
+        alert("Variance analysis error: " + (err.response?.data?.detail || err.message));
+      }
+    },
+    async forecast() {
+      try {
+        const res = await axios.post('/api/finance/forecast', this.budgetItems);
+        this.forecastResult = res.data.forecast;
+      } catch (err) {
+        alert("Forecasting error: " + (err.response?.data?.detail || err.message));
       }
     }
   }
