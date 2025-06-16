@@ -1,6 +1,7 @@
 <template>
-  <div>
+  <div style="margin: 40px">
     <h2>📈 Cost Estimation Panel</h2>
+    <div class="estimation-panels">
 
   <div v-if="comparisonRows.length > 0">
     <h3>📋 Estimation Comparison Summary</h3>
@@ -33,33 +34,35 @@
       <h3>📊 Cost Estimation Chart</h3>
       <canvas id="comparisonChart" width="600" height="300"></canvas>
     </div>
+    </div>
 
-    <!-- === Function Point === -->
-    <section>
-      <h3>Function Point Estimation</h3>
-      <p class="description">
-        Estimate size via FP and then run COCOMO on converted KLOC.
-      </p>
+    <div class="estimation-panels">
+<section>
+  <h3>Function Point Estimation</h3>
+  <p class="description">
+    Estimate size via FP and then run COCOMO on converted KLOC.
+  </p>
 
-      <!-- FP 输入 -->
-      <div v-for="(value, key) in fpInputs" :key="key">
-        <label>{{ key.replace(/_/g, ' ') }}:</label>
-        <input v-model.number="fpInputs[key]" type="number" min="0" />
-      </div>
+  <!-- 统一的两列网格容器 -->
+  <div class="fp-grid">
+    <!-- FP 输入 -->
+    <div v-for="(value, key) in fpInputs" :key="key" class="fp-item">
+      <label>{{ key.replace(/_/g, ' ') }}:</label>
+      <input v-model.number="fpInputs[key]" type="number" min="0" />
+    </div>
 
-      <h4>Function Complexity Level (3-level)</h4>
-      <div v-for="(levels, key) in fpWeightOptions" :key="key">
-        <label>{{ key.replace(/_/g, ' ') }}:</label>
-        <select v-model="fpSelections[key]">
-          <option v-for="(val, label) in levels" :key="label" :value="label">
-            {{ label }} ({{ val }})
-          </option>
-        </select>
-      </div>
+    <!-- FP 权重选择 -->
+    <div v-for="(levels, key) in fpWeightOptions" :key="key" class="fp-item">
+      <label>{{ key.replace(/_/g, ' ') }}:</label>
+      <select v-model="fpSelections[key]">
+        <option v-for="(val, label) in levels" :key="label" :value="label">
+          {{ label }} ({{ val }})
+        </option>
+      </select>
+    </div>
+  </div>
 
-
-      <!-- 简单展示 cost_drivers，按需增删属性 -->
-      <div v-for="(v, k) in fpConfig.costDrivers" :key="k">
+  <div v-for="(v, k) in fpConfig.costDrivers" :key="k">
         <label>{{ k }}:</label>
         <input v-model.number="fpConfig.costDrivers[k]" type="number" step="0.01" min="0.01" />
       </div>
@@ -82,7 +85,7 @@
         <p>Adjusted FP: {{ result.fp.adjusted_fp }}</p>
         <p>KLOC: {{ result.fp.kloc }}</p>
       </div>
-    </section>
+</section>
 
     <!-- === COCOMO === -->
     <section>
@@ -125,6 +128,9 @@
       </div>
 
     </section>
+      </div>
+
+        <div class="estimation-panels">
 
     <!-- === Expert === -->
     <section>
@@ -195,7 +201,7 @@
         </div>
       </div>
     </section>
-
+        </div>
 
     <!-- === Regression === -->
     <section>
@@ -682,5 +688,55 @@ input[type="file"] {
   background-color: #f0faff;
   cursor: pointer;
 }
+
+.fp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 两列布局 */
+  gap: 20px 32px; /* 行距、列距 */
+  margin-top: 10px;
+}
+
+.fp-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.fp-item label {
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+.fp-item input,
+.fp-item select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+.fp-item input:focus,
+.fp-item select:focus {
+  border-color: #007BFF;
+  outline: none;
+}
+
+.estimation-panels {
+  display: flex;
+  gap: 50px; /* 两卡片间距 */
+  margin-bottom: 30px;
+  /*flex-wrap: wrap; !* 小屏自动换行 *!*/
+}
+
+.panel {
+  flex: 1;
+  min-width: 400px; /* 可根据屏幕适配调整 */
+  background-color: #f9fcff;
+  border-radius: 12px;
+  border: 1px solid #d6e9ff;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.08);
+  padding: 20px;
+}
+
 
 </style>

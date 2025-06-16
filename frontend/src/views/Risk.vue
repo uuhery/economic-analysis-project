@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="margin: 40px">
     <h2>⚠️ Risk Analysis Dashboard</h2>
 
         <!-- 敏感性分析 -->
@@ -58,6 +58,7 @@
     </section>
 
     <!-- 决策树分析 -->
+
     <section>
       <h3>Decision Tree</h3>
       <p class="description">Model choices and outcomes using probability-weighted expected value paths.</p>
@@ -172,13 +173,13 @@ export default {
       this.sensitivity.baseContext.cash_flows_str = "-1000, 300, 400, 500";  // 🟦 示例现金流
 
       this.sensitivity.params = [
-        { name: "loc", min: 10, max: 40, distribution: "uniform" },
-        { name: "cost_per_pm", min: 8000, max: 15000, distribution: "triangular" },
-        { name: "fp_kloc", min: 12, max: 30, distribution: "triangular" },
+        // { name: "loc", min: 10, max: 40, distribution: "uniform" },
+        // { name: "cost_per_pm", min: 8000, max: 15000, distribution: "triangular" },
+        // { name: "fp_kloc", min: 12, max: 30, distribution: "triangular" },
         { name: "discount_rate", min: 0.04, max: 0.12, distribution: "uniform" },
-        { name: "market_growth", min: 0.01, max: 0.1, distribution: "triangular" },
-        { name: "project_delay_cost", min: 10000, max: 60000, distribution: "uniform" },
-        { name: "staff_productivity", min: 0.8, max: 1.2, distribution: "triangular" }
+        // { name: "market_growth", min: 0.01, max: 0.1, distribution: "triangular" },
+        // { name: "project_delay_cost", min: 10000, max: 60000, distribution: "uniform" },
+        // { name: "staff_productivity", min: 0.8, max: 1.2, distribution: "triangular" }
       ];
     },
 

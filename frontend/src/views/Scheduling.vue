@@ -1,10 +1,14 @@
 <template>
-  <div>
+  <div style="margin:40px">
     <h2>📅 Scheduling & Resource Optimization</h2>
 
     <!-- 任务排布优化 -->
-    <section>
+    <div class="form-row-container">
+  <section class="half-section">
+
       <h3>Task Scheduling</h3>
+      <canvas v-if="scheduleResult.length" id="scheduleChart" class="chart-canvas"></canvas>
+
       <div v-for="(task, i) in scheduleTasks" :key="i" class="param-block">
         <input v-model="task.name" placeholder="Task name" />
         <input v-model.number="task.duration" type="number" placeholder="Duration (e.g. 3)" />
@@ -19,24 +23,24 @@
         <button @click="runSchedule">Run Optimization</button>
       </div>
 
-      <div v-if="scheduleResult.length">
-        <h4>Schedule Result:</h4>
-        <ul>
-          <li v-for="r in scheduleResult" :key="r.name">
-            {{ r.name }} -
-            <span v-if="r.skipped">Skipped: {{ r.reason || 'No feasible slot' }}</span>
-            <span v-else>Start: {{ r.start }}, End: {{ r.end }}, Load: {{ r.resource_usage }}</span>
-          </li>
-        </ul>
-      </div>
-
-      <canvas v-if="scheduleResult.length" id="scheduleChart" class="chart-canvas"></canvas>
+<!--      <div v-if="scheduleResult.length">-->
+<!--        <h4>Schedule Result:</h4>-->
+<!--        <ul>-->
+<!--          <li v-for="r in scheduleResult" :key="r.name">-->
+<!--            {{ r.name }} - -->
+<!--            <span v-if="r.skipped">Skipped: {{ r.reason || 'No feasible slot' }}</span>-->
+<!--            <span v-else>Start: {{ r.start }}, End: {{ r.end }}, Load: {{ r.resource_usage }}</span>-->
+<!--          </li>-->
+<!--        </ul>-->
+<!--      </div>-->
 
     </section>
 
     <!-- 资源平滑与均衡 -->
-    <section>
+      <section class="half-section">
       <h3>Resource Smoothing</h3>
+        <canvas v-if="resourceResult.length" id="resourceChart" class="chart-canvas"></canvas>
+
       <div v-for="(task, i) in resourceTasks" :key="i" class="param-block">
         <input v-model="task.name" placeholder="Task name" />
         <input v-model.number="task.workload" type="number" placeholder="Workload (e.g. 30)" />
@@ -55,18 +59,18 @@
         <button @click="runResourceBalance">Run Smoothing</button>
       </div>
 
-      <div v-if="resourceResult.length">
-        <h4>Allocation Result:</h4>
-        <ul>
-          <li v-for="r in resourceResult" :key="r.name">
-            {{ r.name }} - Slots: {{ r.slots.join(', ') }} | Per Slot: {{ r.allocated_per_slot }}
-          </li>
-        </ul>
-      </div>
+<!--      <div v-if="resourceResult.length">-->
+<!--        <h4>Allocation Result:</h4>-->
+<!--        <ul>-->
+<!--          <li v-for="r in resourceResult" :key="r.name">-->
+<!--            {{ r.name }} - Slots: {{ r.slots.join(', ') }} | Per Slot: {{ r.allocated_per_slot }}-->
+<!--          </li>-->
+<!--        </ul>-->
+<!--      </div>-->
 
-      <canvas v-if="resourceResult.length" id="resourceChart" class="chart-canvas"></canvas>
 
     </section>
+    </div>
   </div>
 </template>
 
@@ -110,58 +114,83 @@ export default {
       try {
         const res = await axios.post('/api/scheduling/optimize', this.scheduleTasks);
         this.scheduleResult = res.data.schedule;
-        this.$nextTick(() => this.drawScheduleChart());
+        // this.$nextTick(() => this.drawScheduleChart(this.scheduleResult));
         this.$nextTick(() => this.drawGanttChart(this.scheduleResult));
+
         localStorage.setItem('schedule_result', JSON.stringify(this.scheduleResult));
       } catch (err) {
         alert('Schedule error: ' + err.message);
       }
     },
-    drawScheduleChart() {
-      const tasks = this.scheduleResult.filter(t => !t.skipped);
-      const labels = tasks.map(t => t.name);
-      const starts = tasks.map(t => t.start);
-      const durations = tasks.map(t => t.end - t.start);
-
+    drawGanttChart(schedule) {
       const ctx = document.getElementById('scheduleChart').getContext('2d');
-      if (this.scheduleChart) this.scheduleChart.destroy(); // 避免重叠
+      if (this.scheduleChart) this.scheduleChart.destroy();
+
+      const visibleTasks = schedule.filter(t => !t.skipped);
+      const labels = visibleTasks.map(t => t.name); // y轴任务名
+      const starts = visibleTasks.map(t => t.start);
+      const durations = visibleTasks.map(t => t.end - t.start);
+
+      const invisibleOffset = starts.map(s => s); // 用于创建偏移透明部分
+
       this.scheduleChart = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels,
-          datasets: [{
-            label: 'Start Time',
-            data: starts,
-            backgroundColor: '#90caf9'
-          }, {
-            label: 'Duration',
-            data: durations,
-            backgroundColor: '#42a5f5'
-          }]
+          labels: labels,
+          datasets: [
+            {
+              label: 'Offset',
+              data: invisibleOffset,
+              backgroundColor: 'rgba(0,0,0,0)',
+              stack: 'schedule'
+            },
+            {
+              label: 'Scheduled Duration',
+              data: durations,
+              backgroundColor: '#42a5f5',
+              stack: 'schedule'
+            }
+          ]
         },
         options: {
+          indexAxis: 'y', // ✅ 横向甘特关键
           responsive: true,
           plugins: {
             title: {
               display: true,
-              text: 'Task Scheduling (Start + Duration)',
+              text: 'Gantt Chart: Task Schedule',
               font: { size: 16 }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const i = ctx.dataIndex;
+                  const start = starts[i];
+                  const end = start + durations[i];
+                  return `Start: ${start}, End: ${end}`;
+                }
+              }
             }
           },
           scales: {
             x: {
-              stacked: true,
-              title: { display: true, text: 'Tasks' }
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Time'
+              }
             },
             y: {
-              stacked: true,
-              beginAtZero: true,
-              title: { display: true, text: 'Time' }
+              title: {
+                display: true,
+                text: 'Tasks'
+              }
             }
           }
         }
       });
     },
+
 
     addResourceTask() {
       this.resourceTasks.push({ name: '', workload: 0, flexibility: 0 });
@@ -295,4 +324,22 @@ ul {
 li {
   margin: 4px 0;
 }
+
+.form-row-container {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 40px;
+  flex-wrap: wrap; /* ✅ 可选，屏幕窄时自动换行 */
+}
+
+.half-section {
+  flex: 1;
+  min-width: 460px;
+  padding: 20px;
+  background-color: #f9fcff;
+  border-radius: 12px;
+  border: 1px solid #d6e9ff;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.08);
+}
+
 </style>
